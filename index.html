@@ -118,16 +118,36 @@
   .view{display:none;} .view.active{display:block;}
   @keyframes pg{0%{box-shadow:0 0 0 0 rgba(45,106,79,0.4)}70%{box-shadow:0 0 0 8px rgba(45,106,79,0)}100%{box-shadow:0 0 0 0 rgba(45,106,79,0)}}
   .pulse{animation:pg 0.6s ease;}
+
+  /* USER PICKER */
+  .user-overlay{position:fixed;inset:0;background:rgba(45,106,79,0.96);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+  .user-overlay h2{color:white;font-size:1.4rem;font-weight:800;margin-bottom:6px;}
+  .user-overlay p{color:rgba(255,255,255,0.75);font-size:0.85rem;margin-bottom:28px;text-align:center;}
+  .user-btn{width:100%;max-width:320px;background:white;border:none;border-radius:13px;padding:14px 20px;margin-bottom:10px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:700;color:var(--accent);cursor:pointer;display:flex;align-items:center;gap:12px;transition:transform 0.15s,box-shadow 0.15s;}
+  .user-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2);}
+  .user-btn .avatar{width:36px;height:36px;border-radius:50%;background:var(--ok-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+  .user-name-display{background:rgba(255,255,255,0.15);border-radius:8px;padding:3px 10px;font-size:0.8rem;color:white;cursor:pointer;border:none;font-family:'Heebo',sans-serif;}
+  .user-name-display:hover{background:rgba(255,255,255,0.25);}
 </style>
 </head>
 <body>
+
+<!-- USER PICKER OVERLAY -->
+<div class="user-overlay" id="userOverlay">
+  <h2>👤 מי מתחבר?</h2>
+  <p>כל משתמש שומר היסטוריה נפרדת</p>
+  <button class="user-btn" onclick="selectUser('נורית','🌿')"><span class="avatar">🌿</span><span>נורית</span></button>
+  <button class="user-btn" onclick="selectUser('אלעד','💪')"><span class="avatar">💪</span><span>אלעד</span></button>
+  <button class="user-btn" onclick="selectUser('אלוש','⭐')"><span class="avatar">⭐</span><span>אלוש</span></button>
+</div>
 
 <div class="header">
   <div>
     <div class="header-title">🥗 עוגן תזונה</div>
     <div class="header-date" id="headerDate"></div>
   </div>
-  <div style="display:flex;gap:4px;">
+  <div style="display:flex;gap:4px;align-items:center;">
+    <button class="user-name-display" id="userDisplay" onclick="switchUser()">👤 —</button>
     <button class="nav-btn active" id="navToday" onclick="showView('today')">היום</button>
     <button class="nav-btn" id="navHistory" onclick="showView('history')">היסטוריה</button>
     <button class="nav-btn" id="navSettings" onclick="showView('settings')">הגדרות</button>
@@ -226,6 +246,7 @@ const FOODS = {
     {n:'גבינה לבנה 5% 100ג', p:1},
     {n:'גבינה צהובה 9% 25ג', p:1},
     {n:'יוגורט ביו פרו 0% 200ג', p:1},
+    {n:'ביצה', p:1},
     {n:'טופו 100ג ⚠️+שומן', p:1, xfat:1},
   ],
   fat: [
@@ -236,6 +257,7 @@ const FOODS = {
     {n:'אבוקדו 35ג', p:1},
     {n:'אגוזים/שקדים 7ג', p:1},
     {n:'חמאת בוטנים כפית', p:1},
+    {n:'מיונז כפית', p:1},
   ],
   veg: [
     {n:'ירקות חיים', g:200},
@@ -245,7 +267,7 @@ const FOODS = {
 
 // ── STATE ────────────────────────────────────────────────────────────
 const S = { wakeup:'07:00', meals:{} };
-for (let i=1;i<=5;i++) S.meals[i]={time:'',carb:0,prot:0,fat:0,veg:0,note:'',sc:null,sp:[],sf:[],sv:[],mCarb:0,mProt:0,mFat:0,mVeg:0,carbDesc:'',protDesc:'',fatDesc:'',vegDesc:''};
+for (let i=1;i<=5;i++) S.meals[i]={time:'',carb:0,prot:0,fat:0,veg:0,note:'',sc:[],sp:[],sf:[],sv:[],mCarb:0,mProt:0,mFat:0,mVeg:0,carbDesc:'',protDesc:'',fatDesc:'',vegDesc:''};
 
 // ── BUILD ────────────────────────────────────────────────────────────
 function buildMeals() {
@@ -338,10 +360,14 @@ function tap(el) {
   const meal = S.meals[m];
 
   if (type === 'carb') {
-    // single-select
-    document.querySelectorAll(`.chip[data-meal="${m}"][data-type="carb"]`).forEach(c=>c.classList.remove('sc'));
-    if (meal.sc === name) { meal.sc=null; meal.carb=0; }
-    else { el.classList.add('sc'); meal.sc=name; meal.carb=p; }
+    if (el.classList.contains('sc')) {
+      el.classList.remove('sc');
+      meal.sc = meal.sc.filter(n=>n!==name);
+      meal.carb = Math.max(0, meal.carb-p);
+    } else {
+      el.classList.add('sc');
+      meal.sc.push(name); meal.carb+=p;
+    }
 
   } else if (type === 'prot') {
     if (el.classList.contains('sp')) {
@@ -510,14 +536,40 @@ function copyReport(){
   });
 }
 
+// ── USER ─────────────────────────────────────────────────────────────
+let currentUser = '';
+
+function selectUser(name, emoji) {
+  currentUser = name;
+  document.getElementById('userOverlay').style.display = 'none';
+  document.getElementById('userDisplay').textContent = emoji + ' ' + name;
+  // reset UI
+  for(let i=1;i<=5;i++) S.meals[i]={time:'',carb:0,prot:0,fat:0,veg:0,note:'',sc:[],sp:[],sf:[],sv:[],mCarb:0,mProt:0,mFat:0,mVeg:0,carbDesc:'',protDesc:'',fatDesc:'',vegDesc:''};
+  S.wakeup='07:00';
+  document.getElementById('wakeupTime').value='07:00';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sc','sp','sf','sv'));
+  document.querySelectorAll('.manual-inp,.manual-desc,.note-input,.meal-time').forEach(el=>el.value='');
+  for(let i=1;i<=5;i++) refreshMeal(i);
+  loadFromStorage();
+  updateTimings();
+  refreshBank();
+}
+
+function switchUser(){
+  document.getElementById('userOverlay').style.display='flex';
+}
+
 // ── STORAGE ───────────────────────────────────────────────────────────
-function tk(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;}
+function tk(){const d=new Date();return `${currentUser}_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;}
+function hk(){return `diet_history_${currentUser}`;}
 
 function saveToStorage(){
+  if(!currentUser)return;
   try{localStorage.setItem('diet_'+tk(),JSON.stringify({wakeup:S.wakeup,meals:S.meals}));}catch(e){}
 }
 
 function loadFromStorage(){
+  if(!currentUser)return;
   try{
     const raw=localStorage.getItem('diet_'+tk());
     if(!raw)return;
@@ -531,19 +583,17 @@ function loadFromStorage(){
       const m=S.meals[i];
       const ti=document.querySelector(`.meal-time[data-meal="${i}"]`);
       if(ti&&m.time)ti.value=m.time;
-      if(m.sc){const c=document.querySelector(`.chip[data-meal="${i}"][data-type="carb"][data-name="${CSS.escape(m.sc)}"]`);if(c)c.classList.add('sc');}
+      if(m.sc){(Array.isArray(m.sc)?m.sc:[m.sc]).forEach(n=>{const c=document.querySelector(`.chip[data-meal="${i}"][data-type="carb"][data-name="${CSS.escape(n)}"]`);if(c)c.classList.add('sc');});}
       (m.sp||[]).forEach(n=>{const c=document.querySelector(`.chip[data-meal="${i}"][data-type="prot"][data-name="${CSS.escape(n)}"]`);if(c)c.classList.add('sp');});
       (m.sf||[]).forEach(n=>{const c=document.querySelector(`.chip[data-meal="${i}"][data-type="fat"][data-name="${CSS.escape(n)}"]`);if(c)c.classList.add('sf');});
       (m.sv||[]).forEach(n=>{const c=document.querySelector(`.chip[data-meal="${i}"][data-type="veg"][data-name="${CSS.escape(n)}"]`);if(c)c.classList.add('sv');});
       const ni=document.querySelector(`.note-input[data-meal="${i}"]`);if(ni&&m.note)ni.value=m.note;
-      // restore manual inputs
       ['carb','prot','fat','veg'].forEach(t=>{
         const mi=document.querySelector(`.manual-inp[data-meal="${i}"][data-mtype="${t}"]`);
         const key='m'+t[0].toUpperCase()+t.slice(1);
         if(mi&&m[key])mi.value=m[key];
-        const descKey=t+'Desc';
         const di=document.querySelector(`.manual-desc[data-meal="${i}"][data-mtype="${t}-desc"]`);
-        if(di&&m[descKey])di.value=m[descKey];
+        if(di&&m[t+'Desc'])di.value=m[t+'Desc'];
       });
       refreshMeal(i);
     }
@@ -551,21 +601,28 @@ function loadFromStorage(){
 }
 
 function saveToHistory(){
+  if(!currentUser)return;
   let C=0,P=0,F=0,V=0;
-  for(let i=1;i<=5;i++){C+=S.meals[i].carb;P+=S.meals[i].prot;F+=S.meals[i].fat;V+=S.meals[i].veg;}
-  const raw=localStorage.getItem('diet_history')||'[]';
+  for(let i=1;i<=5;i++){
+    C+=S.meals[i].carb+(S.meals[i].mCarb||0);
+    P+=S.meals[i].prot+(S.meals[i].mProt||0);
+    F+=S.meals[i].fat +(S.meals[i].mFat||0);
+    V+=S.meals[i].veg +(S.meals[i].mVeg||0);
+  }
+  const raw=localStorage.getItem(hk())||'[]';
   let h=JSON.parse(raw);
   const key=tk();
   const entry={date:key,dateLabel:new Date().toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'numeric'}),carb:C,prot:P,fat:F,veg:V};
   h=h.filter(x=>x.date!==key);h.unshift(entry);if(h.length>14)h=h.slice(0,14);
-  localStorage.setItem('diet_history',JSON.stringify(h));
+  localStorage.setItem(hk(),JSON.stringify(h));
   alert('✅ נשמר בהיסטוריה!');renderHistory();
 }
 
 function renderHistory(){
   const list=document.getElementById('historyList');
-  const h=JSON.parse(localStorage.getItem('diet_history')||'[]');
-  if(!h.length){list.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:40px 0;font-size:0.83rem;">אין היסטוריה עדיין.</div>';return;}
+  if(!currentUser){list.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:40px 0;font-size:0.83rem;">יש להתחבר תחילה.</div>';return;}
+  const h=JSON.parse(localStorage.getItem(hk())||'[]');
+  if(!h.length){list.innerHTML=`<div style="color:var(--text-muted);text-align:center;padding:40px 0;font-size:0.83rem;">אין היסטוריה עדיין עבור ${currentUser}.</div>`;return;}
   list.innerHTML=h.map(x=>`<div class="history-item">
     <div class="history-date">${x.dateLabel}</div>
     <div class="history-row"><span>פחמימות</span><span class="history-value ${x.carb>=5&&x.carb<=6?'dok':x.carb>6?'dwarn':''}">${fmt(x.carb)} / 5–6 ${x.carb>=5&&x.carb<=6?'✅':x.carb>6?'⚠️':''}</span></div>
@@ -575,7 +632,7 @@ function renderHistory(){
   </div>`).join('');
 }
 
-function clearToday(){if(!confirm('למחוק?'))return;localStorage.removeItem('diet_'+tk());location.reload();}
+function clearToday(){if(!confirm('למחוק?'))return;if(currentUser)localStorage.removeItem('diet_'+tk());location.reload();}
 
 function showView(v){
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
@@ -591,9 +648,7 @@ function showView(v){
 function init(){
   document.getElementById('headerDate').textContent=new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
   buildMeals();
-  loadFromStorage();
-  updateTimings();
-  refreshBank();
+  // user picker shown — data loads after user selects
 }
 init();
 </script>

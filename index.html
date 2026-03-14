@@ -43,7 +43,14 @@
 
   .section-title{font-size:0.68rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin:15px 0 7px;}
 
-  .meal-card{background:var(--card);border-radius:13px;padding:12px;margin-bottom:9px;box-shadow:var(--shadow);}
+  .meal-card{background:var(--card);border-radius:13px;padding:0;margin-bottom:9px;box-shadow:var(--shadow);overflow:hidden;}
+  .meal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none;transition:background 0.15s;}
+  .meal-header:hover{background:#f9f6f1;}
+  .meal-header.open{border-bottom:1px solid var(--border);}
+  .meal-chevron{font-size:0.75rem;color:var(--text-muted);transition:transform 0.25s;margin-right:4px;}
+  .meal-chevron.open{transform:rotate(180deg);}
+  .meal-body{display:none;padding:12px 12px 14px;}
+  .meal-body.open{display:block;}
   .meal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
   .meal-name{font-weight:700;font-size:0.88rem;}
   .meal-right{display:flex;align-items:center;gap:5px;}
@@ -128,6 +135,17 @@
   .user-btn .avatar{width:36px;height:36px;border-radius:50%;background:var(--ok-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
   .user-name-display{background:rgba(255,255,255,0.15);border-radius:8px;padding:3px 10px;font-size:0.8rem;color:white;cursor:pointer;border:none;font-family:'Heebo',sans-serif;}
   .user-name-display:hover{background:rgba(255,255,255,0.25);}
+
+  .photo-btn{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#e8f4fd,#d4ecff);border:1.5px solid #90c4e8;border-radius:10px;padding:9px 16px;font-family:'Heebo',sans-serif;font-size:0.82rem;font-weight:600;color:#1a6fa3;cursor:pointer;transition:all 0.2s;margin-top:10px;width:100%;justify-content:center;}
+  .photo-btn:hover{background:linear-gradient(135deg,#d4ecff,#bde0ff);border-color:#5aaae0;transform:translateY(-1px);box-shadow:0 3px 10px rgba(26,111,163,0.18);}
+  .photo-btn .photo-icon{font-size:1.1rem;}
+  .photo-result{background:#f0f8ff;border:1px solid #bee3f8;border-radius:9px;padding:10px 12px;margin-top:7px;font-size:0.76rem;line-height:1.6;color:var(--text);display:none;}
+  .photo-result.show{display:block;}
+  .photo-result strong{color:var(--accent);display:block;margin-bottom:4px;}
+  .photo-loading{color:#1a6fa3;font-style:italic;}
+  .apply-photo-btn{margin-top:7px;background:var(--accent);color:white;border:none;border-radius:8px;padding:5px 14px;font-family:'Heebo',sans-serif;font-size:0.75rem;cursor:pointer;}
+  .apply-photo-btn:hover{background:var(--accent2);}
+  input[type="file"].hidden-file{display:none;}
 </style>
 </head>
 <body>
@@ -168,8 +186,8 @@
     <div class="bank-card">
       <div class="bank-title">בנק יומי</div>
       <div class="bank-items">
-        <div class="bank-item" id="bkC"><div class="bank-label">פחמימות</div><div class="bank-value" id="bvC" style="color:var(--carb)">0</div><div class="bank-fraction">מתוך 5–6</div></div>
-        <div class="bank-item" id="bkP"><div class="bank-label">חלבונים</div><div class="bank-value" id="bvP" style="color:var(--prot)">0</div><div class="bank-fraction">מתוך 3.5</div></div>
+        <div class="bank-item" id="bkC"><div class="bank-label">פחמימות</div><div class="bank-value" id="bvC" style="color:var(--carb)">0</div><div class="bank-fraction">מתוך 4–6</div></div>
+        <div class="bank-item" id="bkP"><div class="bank-label">חלבונים</div><div class="bank-value" id="bvP" style="color:var(--prot)">0</div><div class="bank-fraction">מתוך 4</div></div>
         <div class="bank-item" id="bkF"><div class="bank-label">שומנים</div><div class="bank-value" id="bvF" style="color:var(--fat)">0</div><div class="bank-fraction">מתוך 2</div></div>
         <div class="bank-item" id="bkV"><div class="bank-label">ירקות</div><div class="bank-value" id="bvV" style="color:var(--veg)">0</div><div class="bank-fraction">מתוך 700ג</div></div>
       </div>
@@ -194,8 +212,8 @@
   <div class="view" id="viewSettings">
     <div class="section-title" style="margin-top:6px;">הגדרות התוכנית</div>
     <div class="settings-card">
-      <div class="settings-row"><span>פחמימות ביום</span><span class="sval">5–6 מנות</span></div>
-      <div class="settings-row"><span>חלבון ביום</span><span class="sval">3.5 מנות</span></div>
+      <div class="settings-row"><span>פחמימות ביום</span><span class="sval">4–6 מנות</span></div>
+      <div class="settings-row"><span>חלבון ביום</span><span class="sval">4 מנות</span></div>
       <div class="settings-row"><span>שומן ביום</span><span class="sval">2 מנות</span></div>
       <div class="settings-row"><span>ירקות ביום</span><span class="sval">700 גרם</span></div>
       <div class="settings-row"><span>מרווח בין ארוחות</span><span class="sval">עד 4 שעות</span></div>
@@ -220,33 +238,66 @@
 const FOODS = {
   carb: [
     {n:'2 פרוסות לחם קל', p:1},
-    {n:'פיתה כוסמין קלה', p:1},
+    {n:'פיתה קלה 79 קל', p:1},
+    {n:'פריכיות', p:1},
+    {n:'פרוסת עוגה / עוגייה', p:1},
+    {n:'חטיף אנרגיה', p:1},
+    {n:'גלידה/ארטיק דיאט', p:1},
+    {n:'אורז 80ג מבושל', p:1},
+    {n:'פסטה 80ג מבושלת', p:1},
+    {n:'קוסקוס 80ג מבושל', p:1},
+    {n:'פתיתים 80ג מבושל', p:1},
+    {n:'קינואה 80ג מבושלת', p:1},
+    {n:'בורגול 80ג מבושל', p:1},
+    {n:'כוסמת 80ג מבושלת', p:1},
+    {n:'חיטה 80ג מבושלת', p:1},
+    {n:'תפ"א 100ג לפני בישול', p:1},
+    {n:'בטטה 90ג לפני בישול', p:1},
     {n:'תפוח 160ג', p:1},
-    {n:'תות 250ג', p:1},
+    {n:'תותים 250ג', p:1},
     {n:'בננה 80ג', p:1},
     {n:'קיווי 130ג', p:1},
     {n:'אוכמניות 120ג', p:1},
     {n:'אפרסמון 100ג', p:1},
     {n:'אפרסק 200ג', p:1},
-    {n:'אורז 160ג מבושל', p:1},
-    {n:'תפ"א 200ג', p:1},
-    {n:'בטטה 180ג', p:1},
-    {n:'פסטה 160ג מבושלת', p:1},
-    {n:'פתיתים 160ג מבושל', p:1},
-    {n:'קינואה 160ג מבושלת', p:1},
+    {n:'ענבים 110ג', p:1},
+    {n:'מלון 200ג', p:1},
+    {n:'אבטיח 250ג', p:1},
+    {n:'אגס 160ג', p:1},
+    {n:'שזיף 170ג', p:1},
+    {n:'מנגו 120ג', p:1},
+    {n:'רימון 100ג', p:1},
+    {n:'תמר מג׳הול 30ג', p:1},
+    {n:'גויאבה 120ג', p:1},
+    {n:'אננס 150ג', p:1},
+    {n:'פומלה 200ג', p:1},
+    {n:'תפוז 180ג', p:1},
+    {n:'קלמנטינות 180ג', p:1},
+    {n:'דובדבן 110ג', p:1},
+    {n:'משמש 160ג', p:1},
+    {n:'פסיפלורה 75ג', p:1},
   ],
   prot: [
     {n:'חזה עוף 150ג', p:1},
     {n:'פרגית 150ג', p:1},
-    {n:'בשר בקר 200ג', p:1},
-    {n:'דג לבן 200ג', p:1},
-    {n:'סלמון 100ג', p:1},
+    {n:'כבד עוף 150ג', p:1},
+    {n:'בשר בקר/סינטה 150ג', p:1},
+    {n:'דג לבן 150ג', p:1},
+    {n:'סלמון 75ג', p:1},
     {n:'טונה במים (קופסה)', p:1},
-    {n:'קוטג׳ 100ג', p:1},
+    {n:'קוטג׳ 5% 100ג', p:1},
     {n:'גבינה לבנה 5% 100ג', p:1},
-    {n:'גבינה צהובה 9% 25ג', p:1},
+    {n:'גבינה בולגרית/צפתית 5%', p:1},
+    {n:'גבינה צהובה עד 15%', p:1},
+    {n:'גבינות עיזים', p:1},
+    {n:'יוגורט', p:1},
     {n:'יוגורט ביו פרו 0% 200ג', p:1},
     {n:'ביצה', p:1},
+    {n:'חלבון בלבד (4 יח׳)', p:1},
+    {n:'פסטרמה 1% שומן', p:1},
+    {n:'אפונה/שעועית 150ג', p:1},
+    {n:'חומוס גרגירים 150ג', p:1},
+    {n:'עדשים/קינואה 150ג', p:1},
     {n:'טופו 100ג ⚠️+שומן', p:1, xfat:1},
   ],
   fat: [
@@ -284,13 +335,15 @@ function chips(type, meal, arr) {
 
 function mealHTML(i) {
   return `<div class="meal-card" id="mc${i}">
-    <div class="meal-header">
+    <div class="meal-header" onclick="toggleMeal(${i})" id="mh${i}">
       <div class="meal-name">ארוחה ${i}</div>
       <div class="meal-right">
         <span class="time-badge" id="tb${i}">—</span>
         <span id="ms${i}">⬜</span>
+        <span class="meal-chevron" id="chev${i}">▼</span>
       </div>
     </div>
+    <div class="meal-body" id="mb${i}">
     <div class="meal-time-row">
       <span class="meal-time-label">⏰ שעה:</span>
       <input type="time" class="meal-time" data-meal="${i}" onchange="updateTimings()">
@@ -349,7 +402,28 @@ function mealHTML(i) {
       </div>
     </div>
     <input type="text" class="note-input" data-meal="${i}" placeholder="הערה חופשית..." oninput="S.meals[${i}].note=this.value;saveToStorage();">
+    <input type="file" accept="image/*" class="hidden-file" id="photoFile${i}" onchange="analyzePhoto(this, ${i})">
+    <button class="photo-btn" onclick="document.getElementById('photoFile${i}').click()"><span class="photo-icon">📷</span> נתח את הצלחת עם AI</button>
+    <div class="photo-result" id="photoResult${i}"></div>
+    </div>
   </div>`;
+}
+
+// ── DRILL DOWN ────────────────────────────────────────────────────────
+function toggleMeal(i) {
+  const body  = document.getElementById('mb'   + i);
+  const header= document.getElementById('mh'   + i);
+  const chev  = document.getElementById('chev' + i);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+function openMeal(i) {
+  document.getElementById('mb'   + i).classList.add('open');
+  document.getElementById('mh'   + i).classList.add('open');
+  document.getElementById('chev' + i).classList.add('open');
 }
 
 // ── TAP CHIP ─────────────────────────────────────────────────────────
@@ -450,7 +524,7 @@ function refreshBank() {
   document.getElementById('bvF').textContent=fmt(F);
   document.getElementById('bvV').textContent=V+'ג';
   styleBank('bkC','bvC',C,5,6);
-  styleBank('bkP','bvP',P,3.5,3.5);
+  styleBank('bkP','bvP',P,4,4);
   styleBank('bkF','bvF',F,2,2);
   styleBank('bkV','bvV',V>=700?1:0,1,1);
   genAlerts(C,P,F,V);
@@ -486,8 +560,8 @@ function tgap(a,b){if(!a||!b)return 0;const[h1,m1]=a.split(':').map(Number),[h2,
 function genAlerts(C,P,F,V){
   const z=document.getElementById('alertsZone');z.innerHTML='';
   if(C>6)a(z,`⚠️ ${fmt(C)} מנות פחמימה — חרגת מהמקסימום (6).`,'warn');
-  if(C>=5&&C<=6)a(z,`✅ ${fmt(C)} מנות פחמימה — בטווח!`,'good');
-  if(P>3.5)a(z,`⚠️ ${fmt(P)} מנות חלבון — חרגת מהמקסימום (3.5).`,'warn');
+  if(C>=4&&C<=6)a(z,`✅ ${fmt(C)} מנות פחמימה — בטווח!`,'good');
+  if(P>4)a(z,`⚠️ ${fmt(P)} מנות חלבון — חרגת מהמקסימום (4).`,'warn');
   if(F>2)a(z,`⚠️ ${fmt(F)} מנות שומן — המגבלה היא 2.`,'warn');
   if(V>0&&V<700)a(z,`ℹ️ חסרים עוד ${700-V} גרם ירקות.`,'info');
   if(V>=700)a(z,`✅ הגעת ל-700 גרם ירקות!`,'good');
@@ -522,8 +596,8 @@ function genFeedback(C,P,F,V){
     r+=line+(parts.length?parts.join(' + '):'—')+'\n';
   }
   r+='\nסיכום:\n';
-  r+=`פחמימות: ${fmt(C)}/5–6 ${C>=5&&C<=6?'✅':C>6?'⚠️ חריגה':'⚠️ חסרות'}\n`;
-  r+=`חלבונים: ${fmt(P)}/3.5 ${P>=3.5?'✅':'⚠️ חסרות'}\n`;
+  r+=`פחמימות: ${fmt(C)}/4–6 ${C>=4&&C<=6?'✅':C>6?'⚠️ חריגה':'⚠️ חסרות'}\n`;
+  r+=`חלבונים: ${fmt(P)}/4 ${P>=4?'✅':'⚠️ חסרות'}\n`;
   r+=`שומנים: ${fmt(F)}/2 ${F===2?'✅':F>2?'⚠️ חריגה':''}\n`;
   r+=`ירקות: ${V}/700ג ${V>=700?'✅':'⚠️ לא הושלמו'}\n`;
   el.textContent=r;el.style.fontStyle='normal';el.style.color='var(--text)';el.style.fontSize='0.76rem';
@@ -533,6 +607,90 @@ function genFeedback(C,P,F,V){
 function copyReport(){
   navigator.clipboard.writeText(document.getElementById('feedbackText').textContent).then(()=>{
     const b=document.getElementById('copyBtn');b.textContent='✅ הועתק!';setTimeout(()=>b.textContent='📋 העתק לוואטסאפ',2000);
+  });
+}
+
+// ── PHOTO ANALYSIS ───────────────────────────────────────────────────
+async function analyzePhoto(input, mealNum) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const resultDiv = document.getElementById('photoResult' + mealNum);
+  resultDiv.className = 'photo-result show';
+  resultDiv.innerHTML = '<span class="photo-loading">🔍 מנתח את הצלחת... רגע...</span>';
+
+  try {
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || 'image/jpeg';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `אתה דיאטנית של תוכנית "עדי כהן חיטוב בהתאמה אישית". בתוכנית זו:
+- מנת פחמימה = 1 יחידה (לחם 2 פרוסות קלות, אורז 160ג מבושל, פרי בינוני, בטטה 180ג וכו')
+- מנת חלבון = 1 יחידה (חזה עוף 150ג, דג 150-200ג, ביצה, קוטג 100ג, טונה וכו')
+- מנת שומן = 1 יחידה (כפית שמן/טחינה, 7ג אגוזים, 35ג אבוקדו)
+- ירקות נספרים בגרמים (יעד 700ג ביום)
+ענה בעברית בלבד. היה ספציפי ומדויק. אם לא ברור מה בתמונה, אמור זאת.`,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: 'נתח את הארוחה בתמונה לפי תוכנית עדי כהן. ספק הערכה של:\n1. מה רואים בצלחת\n2. מספר מנות פחמימה\n3. מספר מנות חלבון\n4. מספר מנות שומן\n5. כמות ירקות בגרמים (הערכה)\n6. הערות כלליות\n\nענה בפורמט:\nמה בצלחת: [תיאור]\nפחמימות: [מספר] מנות\nחלבון: [מספר] מנות\nשומן: [מספר] מנות\nירקות: [גרמים] גרם\nהערות: [הערות]' }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || 'לא הצלחתי לנתח את התמונה.';
+
+    // Parse the response
+    const carbMatch = text.match(/פחמימות:\s*([\d.]+)/);
+    const protMatch = text.match(/חלבון:\s*([\d.]+)/);
+    const fatMatch  = text.match(/שומן:\s*([\d.]+)/);
+    const vegMatch  = text.match(/ירקות:\s*([\d]+)/);
+
+    const carb = carbMatch ? parseFloat(carbMatch[1]) : null;
+    const prot = protMatch ? parseFloat(protMatch[1]) : null;
+    const fat  = fatMatch  ? parseFloat(fatMatch[1])  : null;
+    const veg  = vegMatch  ? parseInt(vegMatch[1])     : null;
+
+    let applyBtn = '';
+    if (carb !== null || prot !== null || fat !== null || veg !== null) {
+      const dataStr = JSON.stringify({carb, prot, fat, veg, meal: mealNum});
+      applyBtn = `<button class="apply-photo-btn" onclick='applyPhotoResult(${dataStr})'>✅ החל על ארוחה ${mealNum}</button>`;
+    }
+
+    resultDiv.innerHTML = `<strong>📷 ניתוח AI:</strong>${text.replace(/\n/g,'<br>')}${applyBtn}`;
+
+  } catch(e) {
+    resultDiv.innerHTML = '<span style="color:var(--warn)">שגיאה בניתוח. נסי שוב.</span>';
+  }
+  input.value = '';
+}
+
+function applyPhotoResult({carb, prot, fat, veg, meal}) {
+  const m = S.meals[meal];
+  if (carb !== null) { m.mCarb = carb; const el = document.querySelector(`.manual-inp[data-meal="${meal}"][data-mtype="carb"]`); if(el) el.value = carb; }
+  if (prot !== null) { m.mProt = prot; const el = document.querySelector(`.manual-inp[data-meal="${meal}"][data-mtype="prot"]`); if(el) el.value = prot; }
+  if (fat  !== null) { m.mFat  = fat;  const el = document.querySelector(`.manual-inp[data-meal="${meal}"][data-mtype="fat"]`);  if(el) el.value = fat; }
+  if (veg  !== null) { m.mVeg  = veg;  const el = document.querySelector(`.manual-inp[data-meal="${meal}"][data-mtype="veg"]`);  if(el) el.value = veg; }
+  // add note
+  const descCarb = document.querySelector(`.manual-desc[data-meal="${meal}"][data-mtype="carb-desc"]`);
+  if(descCarb) { descCarb.value = 'ניתוח AI'; m.carbDesc = 'ניתוח AI'; }
+  refreshMeal(meal);
+  refreshBank();
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -596,6 +754,9 @@ function loadFromStorage(){
         if(di&&m[t+'Desc'])di.value=m[t+'Desc'];
       });
       refreshMeal(i);
+      // auto-open if has data
+      const m2=S.meals[i];
+      if(m2.carb||m2.prot||m2.fat||m2.veg||m2.mCarb||m2.mProt||m2.mFat||m2.mVeg||m2.time) openMeal(i);
     }
   }catch(e){}
 }
@@ -625,8 +786,8 @@ function renderHistory(){
   if(!h.length){list.innerHTML=`<div style="color:var(--text-muted);text-align:center;padding:40px 0;font-size:0.83rem;">אין היסטוריה עדיין עבור ${currentUser}.</div>`;return;}
   list.innerHTML=h.map(x=>`<div class="history-item">
     <div class="history-date">${x.dateLabel}</div>
-    <div class="history-row"><span>פחמימות</span><span class="history-value ${x.carb>=5&&x.carb<=6?'dok':x.carb>6?'dwarn':''}">${fmt(x.carb)} / 5–6 ${x.carb>=5&&x.carb<=6?'✅':x.carb>6?'⚠️':''}</span></div>
-    <div class="history-row"><span>חלבונים</span><span class="history-value ${x.prot>=3.5?'dok':'dwarn'}">${fmt(x.prot)} / 3.5 ${x.prot>=3.5?'✅':'⚠️'}</span></div>
+    <div class="history-row"><span>פחמימות</span><span class="history-value ${x.carb>=4&&x.carb<=6?'dok':x.carb>6?'dwarn':''}">${fmt(x.carb)} / 4–6 ${x.carb>=4&&x.carb<=6?'✅':x.carb>6?'⚠️':''}</span></div>
+    <div class="history-row"><span>חלבונים</span><span class="history-value ${x.prot>=4?'dok':'dwarn'}">${fmt(x.prot)} / 4 ${x.prot>=4?'✅':'⚠️'}</span></div>
     <div class="history-row"><span>שומנים</span><span class="history-value">${fmt(x.fat)} / 2 ${x.fat===2?'✅':''}</span></div>
     <div class="history-row"><span>ירקות</span><span class="history-value ${x.veg>=700?'dok':'dwarn'}">${x.veg}ג / 700ג ${x.veg>=700?'✅':'⚠️'}</span></div>
   </div>`).join('');
